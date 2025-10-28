@@ -1,0 +1,258 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String         @id @default(cuid())
+  email             String         @unique
+  emailVerified     DateTime?
+  password          String?        // For email/password auth (null for OAuth users)
+  phone             String?        // User's phone number with country code
+  phoneVerified     DateTime?
+  name              String?        // From Google or entered by user
+  image             String?        // Avatar from Google
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  isPremium         Boolean        @default(false)
+  premiumExpiresAt  DateTime?
+  superLikesLeft    Int            @default(5) // Daily limit
+  superLikesResetAt DateTime       @default(now())
+  readReceiptsEnabled Boolean      @default(false)
+  profile           Profile?
+  likesGiven        Like[]         @relation("likes_given")
+  likesReceived     Like[]         @relation("likes_received")
+  superLikesGiven   SuperLike[]    @relation("superlikes_given")
+  superLikesReceived SuperLike[]   @relation("superlikes_received")
+  matchesA          Match[]        @relation("matches_a")
+  matchesB          Match[]        @relation("matches_b")
+  messages          Message[]
+  reports           Report[]       @relation("reports_made")
+  blocksGiven       Block[]        @relation("blocks_given")
+  blocksReceived    Block[]        @relation("blocks_received")
+  userKinks         UserKink[]
+  complimentsGiven  Compliment[]   @relation("compliments_given")
+  complimentsReceived Compliment[] @relation("compliments_received")
+  boosts            Boost[]
+}
+
+model Profile {
+  userId              String           @id
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName         String
+  birthdate           DateTime
+  bio                 String?
+  photos              String           @default("[]")
+  voiceNoteUrl        String?
+  gender              String?
+  orientation         String?
+  interests           String           @default("[]")
+  location            String?          // Store as {lat, lon} JSON or use PostGIS extension
+  passportLocation    String?          // Temporary location for Passport feature
+  passportExpiresAt   DateTime?
+  lookingFor          String?          // e.g., "relationship", "casual", "friends"
+  dealbreakers        String           @default("{}")
+  ageMin              Int              @default(18)
+  ageMax              Int              @default(99)
+  distanceMax         Int              @default(50) // km
+  isVerified          Boolean          @default(false)
+  verificationStatus  String           @default("unverified") // "unverified" | "pending" | "verified" | "rejected"
+  isIncognito         Boolean          @default(false)
+  height              Int?             // cm
+  drinking            String?          // "never" | "socially" | "regularly"
+  smoking             String?          // "never" | "socially" | "regularly"
+  wantsKids           String?          // "yes" | "no" | "maybe" | "has_kids"
+  religion            String?
+  politics            String?
+  updatedAt           DateTime         @updatedAt
+  prompts             ProfilePrompt[]
+}
+
+model Like {
+  likerId        String
+  likeeId        String
+  comment        String?  // Optional comment on profile item (Hinge-style)
+  commentOnField String?  // Which field was commented on ("prompt_1", "photo_2", etc.)
+  createdAt      DateTime @default(now())
+  liker          User     @relation("likes_given", fields: [likerId], references: [id], onDelete: Cascade)
+  likee          User     @relation("likes_received", fields: [likeeId], references: [id], onDelete: Cascade)
+
+  @@id([likerId, likeeId])
+  @@index([likeeId])
+  @@index([createdAt])
+}
+
+model Match {
+  id               String    @id @default(cuid())
+  userAId          String
+  userBId          String
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime? // For timed matches (Bumble-style)
+  initiatorId      String?   // Who must message first
+  hasFirstMessage  Boolean   @default(false)
+  userA            User      @relation("matches_a", fields: [userAId], references: [id], onDelete: Cascade)
+  userB            User      @relation("matches_b", fields: [userBId], references: [id], onDelete: Cascade)
+  messages         Message[]
+
+  @@unique([userAId, userBId])
+  @@index([userAId])
+  @@index([userBId])
+}
+
+model Message {
+  id             String    @id @default(cuid())
+  matchId        String
+  senderId       String
+  body           String
+  sentAt         DateTime  @default(now())
+  readAt         DateTime?
+  ephemeralUntil DateTime? // For disappearing messages (Pure-style)
+  match          Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  sender         User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+  @@index([sentAt])
+}
+
+model KinkTag {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  category  String     // e.g., "activity", "dynamic", "fetish"
+  userKinks UserKink[]
+}
+
+model UserKink {
+  userId     String
+  kinkId     String
+  consent    String // "yes" | "maybe" | "no"
+  visibility String // "public" | "matches" | "private"
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kink       KinkTag @relation(fields: [kinkId], references: [id], onDelete: Cascade)
+
+  @@id([userId, kinkId])
+  @@index([userId])
+}
+
+model Block {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("blocks_given", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("blocks_received", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  reporterId String
+  reportedId String
+  reason     String
+  details    String?
+  createdAt  DateTime @default(now())
+  status     String   @default("pending") // "pending" | "reviewed" | "actioned"
+  reporter   User     @relation("reports_made", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([reportedId])
+  @@index([status])
+}
+
+// Super Like - Tinder's premium like feature
+model SuperLike {
+  id          String   @id @default(cuid())
+  likerId     String
+  likeeId     String
+  message     String?  // Optional message with Super Like
+  createdAt   DateTime @default(now())
+  notified    Boolean  @default(false)
+  liker       User     @relation("superlikes_given", fields: [likerId], references: [id], onDelete: Cascade)
+  likee       User     @relation("superlikes_received", fields: [likeeId], references: [id], onDelete: Cascade)
+
+  @@unique([likerId, likeeId])
+  @@index([likeeId])
+  @@index([createdAt])
+}
+
+// Profile Prompts - Hinge-style questions with text/voice answers
+model ProfilePrompt {
+  id          String   @id @default(cuid())
+  profileId   String
+  question    String   // "What's your ideal Sunday?" "Two truths and a lie" etc.
+  answer      String
+  answerType  String   @default("text") // "text" | "voice"
+  voiceUrl    String?  // URL to voice recording
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  profile     Profile  @relation(fields: [profileId], references: [userId], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+// Compliment - Bumble-style pre-match compliment
+model Compliment {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  type       String   // "thoughtful", "funny", "charming", "confident"
+  message    String?  // Optional custom message
+  createdAt  DateTime @default(now())
+  isRead     Boolean  @default(false)
+  sender     User     @relation("compliments_given", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("compliments_received", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([receiverId])
+  @@index([createdAt])
+}
+
+// Boost - Tinder/Bumble-style visibility boost
+model Boost {
+  id        String   @id @default(cuid())
+  userId    String
+  startedAt DateTime @default(now())
+  expiresAt DateTime // Typically 30-60 minutes
+  isActive  Boolean  @default(true)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([isActive])
+}
+
+// Standout - Daily curated profiles (Hinge Standouts / Tinder Top Picks)
+model Standout {
+  id               String   @id @default(cuid())
+  userId           String   // Who sees this standout
+  standoutUserId   String   // The featured profile
+  reason           String   // "highly_compatible", "recent_activity", "new_here", "popular"
+  compatibilityScore Float? // 0-100
+  date             DateTime @default(now())
+  isViewed         Boolean  @default(false)
+  isLiked          Boolean  @default(false)
+
+  @@unique([userId, standoutUserId, date])
+  @@index([userId, date])
+  @@index([standoutUserId])
+}
+
+// Verification Attempt - Photo verification tracking
+model VerificationAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  photoUrl   String   // Selfie uploaded for verification
+  pose       String   // Pose requested ("turn_left", "smile", "neutral")
+  status     String   @default("pending") // "pending" | "approved" | "rejected"
+  rejectionReason String?
+  createdAt  DateTime @default(now())
+  reviewedAt DateTime?
+
+  @@index([userId])
+  @@index([status])
+}
