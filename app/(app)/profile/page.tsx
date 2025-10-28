@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -409,6 +409,29 @@ export default function ProfilePage() {
                 )}
               </>
             )}
+          </CardContent>
+        </Card>
+        {/* Logout Card */}
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">Account</h3>
+                  <p className="text-sm text-muted-foreground">{session?.user?.email}</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => signOut({ callbackUrl: '/signin' })}
+                variant="outline"
+                className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Sign Out
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
