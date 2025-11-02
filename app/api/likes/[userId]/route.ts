@@ -19,13 +19,23 @@ export async function POST(
     return NextResponse.json({ liked: true, demo: true, match: null });
   }
 
-  // Create like
-  await prisma.like.create({
-    data: {
-      likerId: session.user.id,
-      likeeId: targetUserId,
-    },
-  });
+  try {
+    // Create like
+    await prisma.like.create({
+      data: {
+        likerId: session.user.id,
+        likeeId: targetUserId,
+      },
+    });
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      // Unique constraint violation (like already exists)
+      return NextResponse.json({ error: 'Already liked' }, { status: 409 });
+    }
+    // Other error
+    console.error(error);
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
+  }
 
   // Check if target user also liked current user (mutual like = match)
   const mutualLike = await prisma.like.findUnique({

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Star, Sparkles, Heart } from "lucide-react";
+import { Star, Sparkles, Heart, RefreshCw } from "lucide-react";
 
 interface Standout {
   id: string;
@@ -26,6 +26,7 @@ interface Standout {
 export default function StandoutsPage() {
   const [standouts, setStandouts] = useState<Standout[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedStandout, setSelectedStandout] = useState<Standout | null>(null);
 
   useEffect(() => {
@@ -42,6 +43,15 @@ export default function StandoutsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setLoading(true);
+      fetchStandouts();
+      setRefreshing(false);
+    }, 1000);
   };
 
   const handleLike = async (standoutId: string, profileId: string) => {
@@ -114,7 +124,7 @@ export default function StandoutsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-white py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-white py-8 px-4 pt-16 pb-16">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -124,9 +134,10 @@ export default function StandoutsPage() {
           <p className="text-gray-600">
             Your daily curated picks • {standouts.length} profiles
           </p>
-          <p className="text-sm text-gray-500 mt-1">
-            These profiles are specially selected for you based on compatibility
-          </p>
+          <Button onClick={handleRefresh} variant="outline" className="mt-4">
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
         </div>
 
         {standouts.length === 0 ? (
@@ -140,7 +151,7 @@ export default function StandoutsPage() {
             </p>
           </Card>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 ${refreshing ? "animate-pulse" : ""}`}>
             {standouts.map((standout) => (
               <Card
                 key={standout.id}

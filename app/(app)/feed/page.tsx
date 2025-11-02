@@ -4,19 +4,22 @@ import { useState, useEffect } from "react";
 import { EnhancedSwipeCard } from "@/components/feed/EnhancedSwipeCard";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/nav/BottomNav";
-import { Loader2 } from "lucide-react";
+import { Loader2, Star, Undo2 } from "lucide-react";
 
 export default function FeedPage() {
   const [candidates, setCandidates] = useState<any[] | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [lastSwiped, setLastSwiped] = useState<any>(null);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedUser, setMatchedUser] = useState<any>(null);
   const [hasActiveBoost, setHasActiveBoost] = useState(false);
   const [boostTimeLeft, setBoostTimeLeft] = useState(0);
+  const [superLikesLeft, setSuperLikesLeft] = useState(5); // Add this state
 
   useEffect(() => {
     fetchProfiles();
     checkBoostStatus();
+    // TODO: Fetch super a likes left
     const interval = setInterval(checkBoostStatus, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -72,21 +75,14 @@ export default function FeedPage() {
       const data = await res.json();
       
       if (data.profiles) {
-        // Transform data for EnhancedSwipeCard
+        // Transform data for SwipeCard
         const profiles = data.profiles.map((p: any) => ({
           userId: p.userId,
           displayName: p.displayName,
-          age: new Date().getFullYear() - new Date(p.birthdate).getFullYear(),
+          age: p.age, // Use age from API
           bio: p.bio,
           interests: typeof p.interests === 'string' ? JSON.parse(p.interests) : p.interests,
           photos: typeof p.photos === 'string' ? JSON.parse(p.photos) : p.photos,
-          height: p.height,
-          lookingFor: p.lookingFor,
-          drinking: p.drinking,
-          smoking: p.smoking,
-          wantsKids: p.wantsKids,
-          prompts: p.prompts || [],
-          isVerified: p.isVerified,
         }));
         setCandidates(profiles);
         setCurrentIndex(0);
@@ -102,13 +98,14 @@ export default function FeedPage() {
 
   const handleLike = async (comment?: string, commentOnField?: string) => {
     const current = candidates[currentIndex];
-    console.log("Liked:", current.userId, comment ? `with comment: ${comment}` : '');
+    setLastSwiped(current);
+    console.log("Liked:", current.userId);
 
     try {
       const res = await fetch(`/api/likes/${current.userId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comment, commentOnField }),
+        headers: { 'Content-Type': 'application/json' },
       });
       const data = await res.json();
       
@@ -123,15 +120,27 @@ export default function FeedPage() {
     setCurrentIndex((prev) => prev + 1);
   };
 
-  const handleSuperLike = async (message?: string) => {
+  const handlePass = () => {
     const current = candidates[currentIndex];
+    setLastSwiped(current);
+    console.log("Passed:", candidates[currentIndex].userId);
+    setCurrentIndex((prev) => prev + 1);
+  };
+
+  const handleSuperLike = async (message?: string) => {
+    if (superLikesLeft <= 0) {
+      alert("You have no Super Likes left!");
+      return;
+    }
+    const current = candidates[currentIndex];
+    setLastSwiped(current);
     console.log("Super Liked:", current.userId);
 
     try {
       const res = await fetch(`/api/superlikes/${current.userId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message }),
+        headers: { 'Content-Type': 'application/json' },
       });
       const data = await res.json();
       
@@ -139,16 +148,19 @@ export default function FeedPage() {
         setMatchedUser(current);
         setShowMatchModal(true);
       }
+      setSuperLikesLeft(prev => prev - 1);
     } catch (error) {
-      console.error('Error super liking:', error);
+      console.error('Error super liking profile:', error);
     }
 
     setCurrentIndex((prev) => prev + 1);
   };
 
-  const handlePass = () => {
-    console.log("Passed:", candidates[currentIndex].userId);
-    setCurrentIndex((prev) => prev + 1);
+  const handleUndo = () => {
+    if (lastSwiped) {
+      setCurrentIndex((prev) => prev - 1);
+      setLastSwiped(null);
+    }
   };
 
   // Loading state to avoid flashing "No more candidates"
@@ -164,14 +176,22 @@ export default function FeedPage() {
   }
 
   if (candidates.length === 0 || currentIndex >= candidates.length) {
+    const { EmptyFeed } = require("@/components/illustrations/EmptyFeed");
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-orange-50 dark:from-neutral-950 dark:to-neutral-900 flex items-center justify-center p-4">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">No more candidates</h2>
+          <EmptyFeed className="mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-4">You're all caught up!</h2>
           <p className="text-muted-foreground mb-6">
-            Check back later for more matches!
+            You've seen all the profiles in your area. Check back later or upgrade to Premium for unlimited swipes.
           </p>
-          <Button onClick={() => window.location.reload()}>Refresh</Button>
+          <div className="flex gap-4 justify-center">
+            <Button onClick={() => window.location.reload()}>Refresh</Button>
+            <Button className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white">
+              <Star className="w-4 h-4 mr-2" />
+              Go Premium
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -179,7 +199,7 @@ export default function FeedPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-orange-50 dark:from-neutral-950 dark:to-neutral-900 flex flex-col items-center justify-center p-4 pb-24">
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-orange-50 dark:from-neutral-950 dark:to-neutral-900 flex flex-col items-center justify-center p-4 pt-16 pb-24">
         {/* Boost Button/Status */}
         {hasActiveBoost ? (
           <div className="w-full max-w-sm mb-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-5 py-4 rounded-2xl shadow-lg">
@@ -211,12 +231,20 @@ export default function FeedPage() {
           onLike={handleLike}
           onPass={handlePass}
           onSuperLike={handleSuperLike}
-          superLikesLeft={5}
+          superLikesLeft={superLikesLeft}
           hasActiveBoost={hasActiveBoost}
         />
         <p className="text-center text-sm text-muted-foreground mt-4">
           {currentIndex + 1} / {candidates.length}
         </p>
+        {lastSwiped && (
+            <button
+                onClick={handleUndo}
+                className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-600 hover:scale-110 transition-transform"
+            >
+                <Undo2 />
+            </button>
+        )}
       </div>
 
       {/* Match Modal */}
