@@ -19,11 +19,29 @@ export default function SignInPage() {
   const [emailError, setEmailError] = useState("");
   const error = searchParams.get("error");
 
-  // Redirect to feed if already logged in
+  // Redirect based on authentication and profile status
   useEffect(() => {
-    if (status === "authenticated" && session?.user) {
-      router.push("/feed");
-    }
+    const checkProfile = async () => {
+      if (status === "authenticated" && session?.user) {
+        // Check if user has completed their profile
+        try {
+          const response = await fetch("/api/profile");
+          if (response.ok) {
+            // Profile exists, go to feed
+            router.push("/feed");
+          } else if (response.status === 404) {
+            // No profile, go to onboarding
+            router.push("/onboarding");
+          }
+        } catch (error) {
+          console.error("Error checking profile:", error);
+          // On error, assume no profile and go to onboarding
+          router.push("/onboarding");
+        }
+      }
+    };
+    
+    checkProfile();
   }, [status, session, router]);
 
   const handleGoogleSignIn = async () => {
@@ -89,7 +107,7 @@ export default function SignInPage() {
               Dirty Nobita
             </h1>
           </div>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-800 dark:text-gray-200 font-medium">
             Connect with people near you
           </p>
         </div>
@@ -205,13 +223,13 @@ export default function SignInPage() {
             </div>
 
             {/* Privacy Notice */}
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+            <p className="text-xs text-gray-700 dark:text-gray-300 text-center">
               By signing in, you agree to our{" "}
-              <a href="#" className="text-pink-500 hover:text-pink-600">
+              <a href="#" className="text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 font-semibold">
                 Terms of Service
               </a>
               {" "}and{" "}
-              <a href="#" className="text-pink-500 hover:text-pink-600">
+              <a href="#" className="text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 font-semibold">
                 Privacy Policy
               </a>
             </p>
@@ -222,15 +240,15 @@ export default function SignInPage() {
         <div className="mt-12 grid grid-cols-3 gap-4 text-center">
           <div>
             <div className="text-2xl mb-2">⭐</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">Super Likes</p>
+            <p className="text-xs text-gray-800 dark:text-gray-200 font-medium">Super Likes</p>
           </div>
           <div>
             <div className="text-2xl mb-2">🌟</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">Top Picks</p>
+            <p className="text-xs text-gray-800 dark:text-gray-200 font-medium">Top Picks</p>
           </div>
           <div>
             <div className="text-2xl mb-2">✅</div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">Verified</p>
+            <p className="text-xs text-gray-800 dark:text-gray-200 font-medium">Verified</p>
           </div>
         </div>
       </div>

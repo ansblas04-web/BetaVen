@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/nav/BottomNav";
+import NoMatches from "@/components/illustrations/NoMatches";
 
 interface Match {
   id: string;
@@ -88,10 +89,6 @@ export default function MatchesPage() {
               <p className="text-muted-foreground">Loading matches...</p>
             </CardContent>
           </Card>
-        import { NoMatches } from "@/components/illustrations/NoMatches";
-
-// ... (rest of the component)
-
         ) : matches.length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center">

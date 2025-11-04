@@ -109,7 +109,7 @@ export default function FeedPage() {
       });
       const data = await res.json();
       
-      if (data.mutual) {
+      if (data.match && data.match.matched) {
         setMatchedUser(current);
         setShowMatchModal(true);
       }
@@ -144,7 +144,7 @@ export default function FeedPage() {
       });
       const data = await res.json();
       
-      if (data.mutual) {
+      if (data.match && data.match.matched) {
         setMatchedUser(current);
         setShowMatchModal(true);
       }

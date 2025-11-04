@@ -7,7 +7,7 @@ const EXTEND_HOURS = 24; // Extension adds 24 more hours
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { matchId: string } }
+  { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
     const session = await auth();
@@ -15,8 +15,9 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { matchId } = await params;
     const match = await prisma.match.findUnique({
-      where: { id: params.matchId },
+      where: { id: matchId },
       select: {
         id: true,
         createdAt: true,
@@ -70,7 +71,7 @@ export async function GET(
 // Extend match timer
 export async function POST(
   req: NextRequest,
-  { params }: { params: { matchId: string } }
+  { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
     const session = await auth();
@@ -90,8 +91,9 @@ export async function POST(
       );
     }
 
+    const { matchId } = await params;
     const match = await prisma.match.findUnique({
-      where: { id: params.matchId },
+      where: { id: matchId },
     });
 
     if (!match) {
@@ -129,7 +131,7 @@ export async function POST(
     );
 
     const updatedMatch = await prisma.match.update({
-      where: { id: params.matchId },
+      where: { id: matchId },
       data: { expiresAt: newExpiresAt },
     });
 
@@ -152,7 +154,7 @@ export async function POST(
 // Rematch with expired match
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { matchId: string } }
+  { params }: { params: Promise<{ matchId: string }> }
 ) {
   try {
     const session = await auth();
@@ -172,8 +174,9 @@ export async function PUT(
       );
     }
 
+    const { matchId } = await params;
     const match = await prisma.match.findUnique({
-      where: { id: params.matchId },
+      where: { id: matchId },
     });
 
     if (!match) {
@@ -198,7 +201,7 @@ export async function PUT(
     const newExpiresAt = new Date(now.getTime() + MATCH_TIMER_HOURS * 60 * 60 * 1000);
 
     const updatedMatch = await prisma.match.update({
-      where: { id: params.matchId },
+      where: { id: matchId },
       data: {
         expiresAt: newExpiresAt,
         hasFirstMessage: false, // Reset
