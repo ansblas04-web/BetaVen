@@ -89,14 +89,34 @@ export default function OnboardingPage() {
                     Date of Birth
                   </label>
                   <input
-                    type="date"
+                    type="text"
+                    inputMode="numeric"
                     value={formData.birthdate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, birthdate: e.target.value })
-                    }
+                    onChange={(e) => {
+                      // Allow only numbers and dashes
+                      let value = e.target.value.replace(/[^\d-]/g, '');
+                      // Auto-format as user types: YYYY-MM-DD
+                      if (value.length === 4 && !value.includes('-')) {
+                        value = value + '-';
+                      } else if (value.length === 7 && value.split('-').length === 2) {
+                        value = value + '-';
+                      }
+                      setFormData({ ...formData, birthdate: value });
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value.length > 0 && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                        alert("Please enter date in YYYY-MM-DD format (e.g., 1990-01-15)");
+                      }
+                    }}
                     required
-                    className="w-full px-3 py-2 border rounded-md bg-background"
+                    placeholder="1990-01-15"
+                    className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+                    maxLength={10}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Format: YYYY-MM-DD (e.g., 1990-01-15)
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">
@@ -174,17 +194,43 @@ export default function OnboardingPage() {
             )}
 
             <div className="flex justify-between pt-4">
-              {step > 1 && (
+              {step > 0 && step !== 4 && (
                 <Button type="button" variant="outline" onClick={prevStep}>
                   Back
                 </Button>
               )}
-              {step < 4 ? (
-                <Button type="button" onClick={nextStep} className="ml-auto">
+              {step === 0 ? null : step < 4 ? (
+                <Button 
+                  type="button" 
+                  onClick={() => {
+                    // Validation for step 2 (basic info)
+                    if (step === 2) {
+                      if (!formData.displayName) {
+                        alert("Please enter your display name");
+                        return;
+                      }
+                      if (!formData.birthdate) {
+                        alert("Please enter your date of birth");
+                        return;
+                      }
+                      // Validate date format
+                      if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.birthdate)) {
+                        alert("Please enter date in YYYY-MM-DD format (e.g., 1990-01-15)");
+                        return;
+                      }
+                      if (!formData.gender) {
+                        alert("Please select your gender");
+                        return;
+                      }
+                    }
+                    nextStep();
+                  }} 
+                  className="ml-auto"
+                >
                   Next
                 </Button>
               ) : (
-                <Button type="submit" className="ml-auto">
+                <Button type="submit" className="ml-auto bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600">
                   Complete Profile
                 </Button>
               )}
