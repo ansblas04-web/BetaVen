@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { EnhancedSwipeCard } from "@/components/feed/EnhancedSwipeCard";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/nav/BottomNav";
@@ -73,7 +73,11 @@ export default function FeedPage() {
       }
 
       const data = await res.json();
-      
+
+      if (typeof data.superLikesLeft === "number") {
+        setSuperLikesLeft(data.superLikesLeft);
+      }
+
       if (data.profiles) {
         // Transform data for SwipeCard
         const profiles = data.profiles.map((p: any) => ({
@@ -96,7 +100,8 @@ export default function FeedPage() {
     }
   };
 
-  const handleLike = async (comment?: string, commentOnField?: string) => {
+  const handleLike = useCallback(async (comment?: string, commentOnField?: string) => {
+    if (!candidates || currentIndex >= candidates.length) return;
     const current = candidates[currentIndex];
     setLastSwiped(current);
     console.log("Liked:", current.userId);
@@ -118,20 +123,22 @@ export default function FeedPage() {
     }
 
     setCurrentIndex((prev) => prev + 1);
-  };
+  }, [candidates, currentIndex]);
 
-  const handlePass = () => {
+  const handlePass = useCallback(() => {
+    if (!candidates || currentIndex >= candidates.length) return;
     const current = candidates[currentIndex];
     setLastSwiped(current);
     console.log("Passed:", candidates[currentIndex].userId);
     setCurrentIndex((prev) => prev + 1);
-  };
+  }, [candidates, currentIndex]);
 
-  const handleSuperLike = async (message?: string) => {
+  const handleSuperLike = useCallback(async (message?: string) => {
     if (superLikesLeft <= 0) {
       alert("You have no Super Likes left!");
       return;
     }
+    if (!candidates || currentIndex >= candidates.length) return;
     const current = candidates[currentIndex];
     setLastSwiped(current);
     console.log("Super Liked:", current.userId);
@@ -143,18 +150,30 @@ export default function FeedPage() {
         headers: { 'Content-Type': 'application/json' },
       });
       const data = await res.json();
-      
+
+      if (!res.ok) {
+        alert(data.error || "Failed to Super Like profile");
+        return;
+      }
+
       if (data.match && data.match.matched) {
         setMatchedUser(current);
         setShowMatchModal(true);
       }
-      setSuperLikesLeft(prev => prev - 1);
+
+      if (typeof data.superLikesLeft === "number") {
+        setSuperLikesLeft(data.superLikesLeft);
+      } else {
+        setSuperLikesLeft((prev) => Math.max(0, prev - 1));
+      }
     } catch (error) {
       console.error('Error super liking profile:', error);
+      alert('Failed to Super Like profile');
+      return;
     }
 
     setCurrentIndex((prev) => prev + 1);
-  };
+  }, [candidates, currentIndex, superLikesLeft]);
 
   const handleUndo = () => {
     if (lastSwiped) {
@@ -162,6 +181,34 @@ export default function FeedPage() {
       setLastSwiped(null);
     }
   };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!candidates || candidates.length === 0) {
+        return;
+      }
+
+      switch (event.key) {
+        case "ArrowRight":
+          event.preventDefault();
+          handleLike();
+          break;
+        case "ArrowLeft":
+          event.preventDefault();
+          handlePass();
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          handleSuperLike();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [candidates, handleLike, handlePass, handleSuperLike]);
 
   // Loading state to avoid flashing "No more candidates"
   if (candidates === null) {
@@ -199,76 +246,120 @@ export default function FeedPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-orange-50 dark:from-neutral-950 dark:to-neutral-900 flex flex-col items-center justify-center p-4 pt-16 pb-24">
-        {/* Boost Button/Status */}
-        {hasActiveBoost ? (
-          <div className="w-full max-w-sm mb-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-5 py-4 rounded-2xl shadow-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+      {/* Fixed viewport container - no scrolling */}
+      <div className="fixed inset-0 overflow-hidden bg-gradient-to-br from-pink-50 via-purple-50 to-orange-50 dark:from-neutral-950 dark:via-purple-950/20 dark:to-neutral-900">
+        {/* Main content container */}
+        <div className="h-full flex flex-col">
+          {/* Top section with boost button - fixed height */}
+          <div className="flex-shrink-0 pt-4 px-4 pb-2">
+            {hasActiveBoost ? (
+              <div className="max-w-sm mx-auto bg-gradient-to-r from-purple-600 to-pink-600 text-white px-5 py-3 rounded-2xl shadow-lg animate-pulse">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" />
+                    </svg>
+                    <span className="font-bold text-sm">Boost Active</span>
+                  </div>
+                  <span className="text-sm font-semibold bg-white/20 px-2 py-0.5 rounded-full">{boostTimeLeft}m</span>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={activateBoost}
+                className="max-w-sm mx-auto w-full bg-gradient-to-r from-amber-500 via-pink-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-5 py-3 rounded-2xl shadow-lg hover:shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95"
+              >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" />
                 </svg>
-                <span className="font-bold">Boost Active</span>
-              </div>
-              <span className="text-sm font-semibold">{boostTimeLeft}m left</span>
-            </div>
+                <span className="font-bold text-sm">Activate Boost</span>
+              </button>
+            )}
           </div>
-        ) : (
-          <button
-            onClick={activateBoost}
-            className="w-full max-w-sm mb-6 bg-gradient-to-r from-amber-500 via-pink-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-5 py-4 rounded-2xl shadow-lg hover:shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95"
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" />
-            </svg>
-            <span className="font-bold">Activate Boost</span>
-          </button>
-        )}
 
-        {/* Swipe Card */}
-        <EnhancedSwipeCard
-          profile={candidates[currentIndex]}
-          onLike={handleLike}
-          onPass={handlePass}
-          onSuperLike={handleSuperLike}
-          superLikesLeft={superLikesLeft}
-          hasActiveBoost={hasActiveBoost}
-        />
-        <p className="text-center text-sm text-muted-foreground mt-4">
-          {currentIndex + 1} / {candidates.length}
-        </p>
-        {lastSwiped && (
-            <button
+          {/* Card container - takes remaining space */}
+          <div className="flex-1 flex items-center justify-center px-4 relative">
+            {/* Card stack effect - show 2-3 cards behind */}
+            <div className="relative w-full max-w-sm" style={{ height: 'calc(100vh - 240px)' }}>
+              {/* Background cards for stack effect */}
+              {currentIndex + 1 < candidates.length && (
+                <div 
+                  className="absolute inset-0 bg-white dark:bg-neutral-800 rounded-3xl shadow-xl"
+                  style={{ 
+                    transform: 'scale(0.95) translateY(8px)',
+                    opacity: 0.7,
+                    zIndex: 1
+                  }}
+                />
+              )}
+              {currentIndex + 2 < candidates.length && (
+                <div 
+                  className="absolute inset-0 bg-white dark:bg-neutral-800 rounded-3xl shadow-lg"
+                  style={{ 
+                    transform: 'scale(0.90) translateY(16px)',
+                    opacity: 0.4,
+                    zIndex: 0
+                  }}
+                />
+              )}
+              
+              {/* Current card */}
+              <div className="relative z-10 h-full">
+                <EnhancedSwipeCard
+                  profile={candidates[currentIndex]}
+                  onLike={handleLike}
+                  onPass={handlePass}
+                  onSuperLike={handleSuperLike}
+                  superLikesLeft={superLikesLeft}
+                  hasActiveBoost={hasActiveBoost}
+                />
+              </div>
+            </div>
+
+            {/* Undo button */}
+            {lastSwiped && (
+              <button
                 onClick={handleUndo}
-                className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-600 hover:scale-110 transition-transform"
-            >
-                <Undo2 />
-            </button>
-        )}
+                className="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-white dark:bg-neutral-800 shadow-xl flex items-center justify-center text-gray-600 dark:text-gray-300 hover:scale-110 transition-transform z-20 border-2 border-gray-100 dark:border-neutral-700"
+              >
+                <Undo2 className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Bottom section - profile counter and nav */}
+          <div className="flex-shrink-0 pb-20">
+            <p className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+              {currentIndex + 1} of {candidates.length} profiles
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Match Modal */}
       {showMatchModal && matchedUser && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl p-8 max-w-md w-full text-center">
-            <div className="text-6xl mb-4">💖</div>
-            <h2 className="text-3xl font-bold mb-2">It's a Match!</h2>
-            <p className="text-muted-foreground mb-6">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl border border-pink-200 dark:border-pink-900">
+            <div className="text-7xl mb-6 animate-bounce">💖</div>
+            <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+              It's a Match!
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">
               You and {matchedUser.displayName} liked each other
             </p>
             <div className="space-y-3">
               <Button
-                className="w-full"
+                className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white py-6 text-lg rounded-2xl"
                 onClick={() => {
                   setShowMatchModal(false);
                   // TODO: Navigate to chat
                 }}
               >
-                Send a Message
+                Send a Message 💬
               </Button>
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full py-6 text-lg rounded-2xl border-2"
                 onClick={() => setShowMatchModal(false)}
               >
                 Keep Swiping

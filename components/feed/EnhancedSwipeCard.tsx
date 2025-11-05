@@ -68,9 +68,10 @@ export function EnhancedSwipeCard({
 
   return (
     <>
-      <div className="w-full max-w-sm mx-auto relative">
-        {/* Main card with photo */}
-        <div className="relative aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-amber-200 via-pink-200 to-orange-200">
+      {/* Card wrapper - fills available height */}
+      <div className="h-full w-full flex flex-col">
+        {/* Main card with photo - takes most space */}
+        <div className="relative flex-1 rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-pink-300 via-purple-300 to-orange-300 transition-transform hover:scale-[1.02]">
           {profile.photos.length > 0 ? (
             <img
               src={profile.photos[currentPhotoIndex] || ""}
@@ -78,19 +79,19 @@ export function EnhancedSwipeCard({
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="flex items-center justify-center text-6xl h-full">
+            <div className="flex items-center justify-center text-6xl h-full bg-gradient-to-br from-amber-200 via-pink-200 to-orange-200">
               {profile.displayName.charAt(0)}
             </div>
           )}
 
           {/* Photo indicators */}
           {profile.photos.length > 1 && (
-            <div className="absolute top-4 left-0 right-0 flex gap-1.5 px-4">
+            <div className="absolute top-4 left-0 right-0 flex gap-1.5 px-4 z-10">
               {profile.photos.map((_, idx) => (
                 <div
                   key={idx}
-                  className={`flex-1 h-1 rounded-full transition-all ${
-                    idx === currentPhotoIndex ? "bg-white" : "bg-white/30"
+                  className={`flex-1 h-1 rounded-full transition-all cursor-pointer ${
+                    idx === currentPhotoIndex ? "bg-white shadow-lg" : "bg-white/30"
                   }`}
                   onClick={() => setCurrentPhotoIndex(idx)}
                 />
@@ -99,103 +100,103 @@ export function EnhancedSwipeCard({
           )}
 
           {/* Badges */}
-          <div className="absolute top-12 right-4 flex flex-col gap-2">
+          <div className="absolute top-12 right-4 flex flex-col gap-2 z-10">
             {profile.isVerified && (
-              <div className="bg-blue-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg backdrop-blur">
+              <div className="bg-blue-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg backdrop-blur-sm">
                 ✓ Verified
               </div>
             )}
             {hasActiveBoost && (
-              <div className="bg-purple-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg backdrop-blur">
+              <div className="bg-purple-600 text-white px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg backdrop-blur-sm">
                 <Zap className="w-3 h-3" />
                 Boosted
               </div>
             )}
           </div>
-        </div>
 
-        {/* Profile info overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-6 pb-24 text-white">
-          <h2 className="text-3xl font-bold tracking-tight">
-            {profile.displayName}, {profile.age}
-          </h2>
+          {/* Profile info overlay */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-5 pb-6 text-white">
+            <h2 className="text-3xl font-bold tracking-tight drop-shadow-lg">
+              {profile.displayName}, {profile.age}
+            </h2>
 
-          {profile.bio && (
-            <p className="text-sm mt-3 leading-relaxed opacity-90 line-clamp-2">{profile.bio}</p>
-          )}
+            {profile.bio && (
+              <p className="text-sm mt-2 leading-relaxed opacity-90 line-clamp-2 drop-shadow">{profile.bio}</p>
+            )}
 
-          {/* Quick facts */}
-          <div className="flex flex-wrap gap-2 mt-4 text-xs">
-            {profile.height && (
-              <span className="bg-white/25 backdrop-blur-sm px-3 py-1.5 rounded-full font-medium">
-                {Math.floor(profile.height / 30.48)}'{Math.floor((profile.height % 30.48) / 2.54)}"
-              </span>
-            )}
-            {profile.lookingFor && (
-              <span className="bg-white/25 backdrop-blur-sm px-3 py-1.5 rounded-full font-medium capitalize">
-                {profile.lookingFor}
-              </span>
-            )}
-            {profile.drinking && (
-              <span className="bg-white/25 backdrop-blur-sm px-3 py-1.5 rounded-full font-medium capitalize">
-                🍷 {profile.drinking}
-              </span>
-            )}
-            {profile.smoking && profile.smoking === "never" && (
-              <span className="bg-white/25 backdrop-blur-sm px-3 py-1.5 rounded-full font-medium">
-                🚭 Non-smoker
-              </span>
+            {/* Quick facts */}
+            <div className="flex flex-wrap gap-2 mt-3 text-xs">
+              {profile.height && (
+                <span className="bg-white/25 backdrop-blur-sm px-3 py-1.5 rounded-full font-medium shadow">
+                  {Math.floor(profile.height / 30.48)}'{Math.floor((profile.height % 30.48) / 2.54)}"
+                </span>
+              )}
+              {profile.lookingFor && (
+                <span className="bg-white/25 backdrop-blur-sm px-3 py-1.5 rounded-full font-medium capitalize shadow">
+                  {profile.lookingFor}
+                </span>
+              )}
+              {profile.drinking && (
+                <span className="bg-white/25 backdrop-blur-sm px-3 py-1.5 rounded-full font-medium capitalize shadow">
+                  🍷 {profile.drinking}
+                </span>
+              )}
+              {profile.smoking && profile.smoking === "never" && (
+                <span className="bg-white/25 backdrop-blur-sm px-3 py-1.5 rounded-full font-medium shadow">
+                  🚭 Non-smoker
+                </span>
+              )}
+            </div>
+
+            {/* Interests */}
+            {profile.interests.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {profile.interests.slice(0, 4).map((interest) => (
+                  <span
+                    key={interest}
+                    className="px-3 py-1.5 bg-pink-500/40 backdrop-blur-sm rounded-full text-xs font-medium shadow"
+                  >
+                    {interest}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
-
-          {/* Interests */}
-          {profile.interests.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              {profile.interests.slice(0, 4).map((interest) => (
-                <span
-                  key={interest}
-                  className="px-3 py-1.5 bg-pink-500/40 backdrop-blur-sm rounded-full text-xs font-medium"
-                >
-                  {interest}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
-      </div>
 
-      {/* Action buttons - floating below card */}
-      <div className="flex justify-center items-center gap-5 mt-8">
-        <button
-          onClick={onPass}
-          className="w-14 h-14 rounded-full bg-white shadow-xl hover:shadow-2xl hover:scale-110 transition-all flex items-center justify-center border-2 border-gray-100"
-        >
-          <X className="w-7 h-7 text-red-500" strokeWidth={2.5} />
-        </button>
+        {/* Action buttons - fixed at bottom of card */}
+        <div className="flex justify-center items-center gap-4 mt-6 flex-shrink-0">
+          <button
+            onClick={onPass}
+            className="w-14 h-14 rounded-full bg-white dark:bg-neutral-800 shadow-xl hover:shadow-2xl hover:scale-110 transition-all flex items-center justify-center border-2 border-gray-100 dark:border-neutral-700"
+          >
+            <X className="w-7 h-7 text-red-500" strokeWidth={2.5} />
+          </button>
 
-        <button
-          onClick={() => onSuperLike()}
-          disabled={superLikesLeft === 0}
-          className="w-12 h-12 rounded-full bg-blue-500 shadow-xl hover:shadow-2xl hover:bg-blue-600 hover:scale-110 transition-all flex items-center justify-center disabled:opacity-40 disabled:hover:scale-100"
-          title={`${superLikesLeft} Super Likes left`}
-        >
-          <Star className="w-6 h-6 text-white fill-white" strokeWidth={2} />
-        </button>
+          <button
+            onClick={() => onSuperLike()}
+            disabled={superLikesLeft === 0}
+            className="w-12 h-12 rounded-full bg-blue-500 shadow-xl hover:shadow-2xl hover:bg-blue-600 hover:scale-110 transition-all flex items-center justify-center disabled:opacity-40 disabled:hover:scale-100"
+            title={`${superLikesLeft} Super Likes left`}
+          >
+            <Star className="w-6 h-6 text-white fill-white" strokeWidth={2} />
+          </button>
 
-        <button
-          onClick={() => onLike()}
-          className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 via-pink-500 to-orange-600 shadow-xl hover:shadow-2xl hover:scale-110 transition-all flex items-center justify-center"
-        >
-          <Heart className="w-8 h-8 text-white fill-white" strokeWidth={2} />
-        </button>
+          <button
+            onClick={() => onLike()}
+            className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 via-rose-500 to-purple-600 shadow-xl hover:shadow-2xl hover:scale-110 transition-all flex items-center justify-center"
+          >
+            <Heart className="w-8 h-8 text-white fill-white" strokeWidth={2} />
+          </button>
 
-        <button
-          onClick={() => setShowCommentDialog(true)}
-          className="w-12 h-12 rounded-full bg-purple-500 shadow-xl hover:shadow-2xl hover:bg-purple-600 hover:scale-110 transition-all flex items-center justify-center"
-          title="Add a comment"
-        >
-          <MessageCircle className="w-6 h-6 text-white" strokeWidth={2} />
-        </button>
+          <button
+            onClick={() => setShowCommentDialog(true)}
+            className="w-12 h-12 rounded-full bg-purple-500 shadow-xl hover:shadow-2xl hover:bg-purple-600 hover:scale-110 transition-all flex items-center justify-center"
+            title="Add a comment"
+          >
+            <MessageCircle className="w-6 h-6 text-white" strokeWidth={2} />
+          </button>
+        </div>
       </div>
 
       {/* Comment dialog */}
